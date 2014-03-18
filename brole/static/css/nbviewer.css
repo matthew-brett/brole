@@ -1,0 +1,53 @@
+// get fixed navbar on mobiles
+@media (max-width: 767px) /* @grid-float-breakpoint -1 */
+{
+    .navbar-fixed-top
+    {
+    position: fixed;
+    top: 0;
+    margin-left:0;
+    margin-right:0;
+    }
+}
+
+.menu-icon{
+    line-height: 8px;
+    margin-right: 5px;
+    position:relative;
+    top:5px;
+}
+
+@media (min-width: 768px){
+    .menu-text{
+        display:none
+    }
+}
+pre, code {
+    /* restore default mono font */
+    font-family: monospace;
+}
+
+/* Footer
+-------------------------------------------------- */
+.footer {
+  margin-top: 45px;
+  padding: 35px 0 36px;
+  border-top: 1px solid #e5e5e5;
+}
+.footer p {
+  margin-bottom: 0;
+  color: #555;
+}
+
+body {
+  position: relative;
+  padding-top: 40px;
+}
+
+@media (max-width: 767px) {
+
+  /* Remove any padding from the body */
+  body {
+    padding-top: 0;
+  }
+}
