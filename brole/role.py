@@ -8,6 +8,8 @@ from os.path import (join as pjoin, relpath, splitext,
 from datetime import datetime
 
 from docutils import nodes, utils
+from docutils.parsers.rst import directives
+from docutils.parsers.rst.roles import set_classes
 
 from sphinx.util.nodes import split_explicit_title
 
@@ -24,8 +26,7 @@ def _rel_url(link_path, page_path):
     return page2link
 
 
-def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
-         evaluate=False):
+def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     """ Role for building and linking to notebook html pages
 
     Parameters
@@ -52,6 +53,10 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
     messages : list
         list of system messages. Can be empty
     """
+    # process options
+    # http://docutils.sourceforge.net/docs/howto/rst-roles.html
+    evaluate = options['evaluate']
+    set_classes(options)
     doc = inliner.document
     env = doc.settings.env
     app = env.app
@@ -64,14 +69,6 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
     # Corresponding output path
     nb_out_path = abspath(pjoin(app.outdir, nb_rel_path))
     nb_out_dir = dirname(nb_out_path)
-    if not exists(nb_out_dir):
-        os.makedirs(nb_out_dir)
-    # Evaluate and copy to output directory
-    if evaluate:
-        nb = evaluate_nb_file(nb_abs_path)
-    else:
-        with open(nb_abs_path, 'rt') as fobj:
-            nb = nbf.read(fobj, 'json')
     out_root, ext = splitext(nb_out_path)
     html_fname = out_root + '.html'
     # Where is the notebook compared to source output?
@@ -83,7 +80,19 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
     rel_to_static = _rel_url(app.outdir, nb_out_dir) + '/_static/'
     def in_static(otheruri):
         return rel_to_static + otheruri
-    if not exists(nb_out_path): # Already done
+    if exists(nb_out_path): # Already done
+        inliner.reporter.warning(
+            'Notebook html {0} exists; not rebuilding'.format(nb_out_path))
+    else:
+        # Evaluate and copy to output directory
+        if not exists(nb_out_dir):
+            os.makedirs(nb_out_dir)
+        if evaluate:
+            print("evaluating", nb_abs_path)
+            nb = evaluate_nb_file(nb_abs_path)
+        else:
+            with open(nb_abs_path, 'rt') as fobj:
+                nb = nbf.read(fobj, 'json')
         with open(nb_out_path, 'wt') as fobj:
             nbf.write(nb, fobj, 'json')
         # Create stripped version
@@ -111,19 +120,20 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
         wrapped_html = template.render(resources)
         with open(html_fname, 'wt') as fobj:
             fobj.write(wrapped_html)
-    else:
-        print(nb_out_path, 'exists', 'ignoring')
     # Return link node
     # url = config.cheeseshop_url + '/' + nb_fname
     ref = nodes.reference(rawtext, title,
                           refuri=_rel_url(html_fname, page_out_dir))
     return [ref], []
 
+brole.options = {'evaluate': directives.flag}
+
 
 def ebrole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     """" Role to force evaluation of notebook when building """
-    return brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
-                 evaluate=True)
+    options['evaluate'] = True
+    return brole(typ, rawtext, text, lineno, inliner, options=options,
+                 content=content)
 
 
 def setup(app):
