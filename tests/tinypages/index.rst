@@ -9,7 +9,10 @@ Welcome to tinypages's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
+
+    notebooks
+    more_notebooks/notebooks
 
 
 
