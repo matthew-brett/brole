@@ -16,7 +16,6 @@ from IPython.nbformat import current as nbf
 from .nbutils import evaluate_nb_file, clear_output, nb_to_html, nb_to_py
 
 DATE_FMT = "%a, %d %h %Y %H:%M:%S UTC"
-HOME = dict(icon = 'chevron-left', text = 'Home', url = '../')
 
 def _rel_url(link_path, page_path):
     page2link = relpath(link_path, page_path)
@@ -64,9 +63,9 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
     nb_rel_path, nb_abs_path = env.relfn2path(nb_fname)
     # Corresponding output path
     nb_out_path = abspath(pjoin(app.outdir, nb_rel_path))
-    dest_dir = dirname(nb_out_path)
-    if not exists(dest_dir):
-        os.makedirs(dest_dir)
+    nb_out_dir = dirname(nb_out_path)
+    if not exists(nb_out_dir):
+        os.makedirs(nb_out_dir)
     # Evaluate and copy to output directory
     if evaluate:
         nb = evaluate_nb_file(nb_abs_path)
@@ -75,16 +74,15 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
             nb = nbf.read(fobj, 'json')
     out_root, ext = splitext(nb_out_path)
     html_fname = out_root + '.html'
-    # Where is the notebook compared to source?
-    src_rel_path, _ = env.relfn2path('.')
-    page_out_path = abspath(pjoin(app.outdir, src_rel_path))
+    # Where is the notebook compared to source output?
+    page_out_path = app.builder.get_outfilename(env.docname)
+    page_out_dir = dirname(page_out_path)
     def _get_url(fname):
-        return _rel_url(fname, page_out_path)
-    # Inject pathto into jinja
-    rel_to_root = _rel_url(app.outdir, page_out_path)
-    def _pathto(otheruri, _):
-        return '/'.join([rel_to_root, otheruri])
-    # import IPython; IPython.embed()
+        return _rel_url(fname, nb_out_dir)
+    # Inject path to static function into jinja
+    rel_to_static = _rel_url(app.outdir, nb_out_dir) + '/_static/'
+    def in_static(otheruri):
+        return rel_to_static + otheruri
     if not exists(nb_out_path): # Already done
         with open(nb_out_path, 'wt') as fobj:
             nbf.write(nb, fobj, 'json')
@@ -101,18 +99,24 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[],
         downloads = {'Notebook': _get_url(nb_out_path),
                      'Notebook (stripped)': _get_url(stripped_fname),
                      'Notebook as Python script': _get_url(py_fname)}
+        home = dict(icon = 'chevron-left',
+                    text = 'Back to docs',
+                    url = _rel_url(page_out_path, nb_out_dir))
         resources.update(nbhtml = html,
-                         pathto = _pathto,
-                         home = HOME,
+                         in_static = in_static,
+                         home = home,
                          date=datetime.utcnow().strftime(DATE_FMT),
                          downloads=downloads)
         template = j2_env.get_template('css_js_notebook.html')
         wrapped_html = template.render(resources)
         with open(html_fname, 'wt') as fobj:
             fobj.write(wrapped_html)
+    else:
+        print(nb_out_path, 'exists', 'ignoring')
     # Return link node
     # url = config.cheeseshop_url + '/' + nb_fname
-    ref = nodes.reference(rawtext, title, refuri=_get_url(html_fname))
+    ref = nodes.reference(rawtext, title,
+                          refuri=_rel_url(html_fname, page_out_dir))
     return [ref], []
 
 
