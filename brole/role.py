@@ -55,8 +55,9 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     """
     # process options
     # http://docutils.sourceforge.net/docs/howto/rst-roles.html
-    evaluate = options['evaluate']
+    evaluate = options.pop('evaluate', False)
     set_classes(options)
+    # Get objects from context
     doc = inliner.document
     env = doc.settings.env
     app = env.app
