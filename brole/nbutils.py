@@ -1,7 +1,8 @@
 """ Utilities for working with notebooks """
 
+from copy import deepcopy
+
 from IPython.config import Config
-from IPython.nbconvert import python
 from IPython.nbconvert.exporters import HTMLExporter, PythonExporter
 
 from runipy.notebook_runner import NotebookRunner
@@ -49,7 +50,7 @@ def clear_output(nb, copy=True):
         notebook with code output removed
     """
     if copy:
-        nb = nb.copy()
+        nb = deepcopy(nb)
     for cell in cellgen(nb, 'code'):
         if hasattr(cell, 'prompt_number'):
             del cell['prompt_number']

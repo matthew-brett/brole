@@ -88,8 +88,8 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         # Evaluate and copy to output directory
         if not exists(nb_out_dir):
             os.makedirs(nb_out_dir)
+        print('nbfile', nb_abs_path, evaluate)
         if evaluate:
-            print("evaluating", nb_abs_path)
             nb = evaluate_nb_file(nb_abs_path)
         else:
             with open(nb_abs_path, 'rt') as fobj:
@@ -105,6 +105,7 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         with open(py_fname, 'wt') as fobj:
             fobj.write(nb_to_py(nb)[0])
         # Make html
+        print(nb)
         html, resources = nb_to_html(nb)
         downloads = {'Notebook': _get_url(nb_out_path),
                      'Notebook (stripped)': _get_url(stripped_fname),
