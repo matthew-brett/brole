@@ -18,6 +18,7 @@ from IPython.nbformat import current as nbf
 from .nbutils import evaluate_nb_file, clear_output, nb_to_html, nb_to_py
 
 DATE_FMT = "%a, %d %h %Y %H:%M:%S UTC"
+WRAPPING_TEMPLATE = 'static_notebook.html'
 
 def _rel_url(link_path, page_path):
     page2link = relpath(link_path, page_path)
@@ -132,7 +133,7 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
                          home = template_home,
                          date=datetime.utcnow().strftime(DATE_FMT),
                          downloads=downloads)
-        template = j2_env.get_template('css_js_notebook.html')
+        template = j2_env.get_template(WRAPPING_TEMPLATE)
         wrapped_html = template.render(resources)
         with open(html_fname, 'wt') as fobj:
             fobj.write(wrapped_html)
