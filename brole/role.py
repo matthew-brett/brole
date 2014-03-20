@@ -26,6 +26,17 @@ def _rel_url(link_path, page_path):
     return page2link
 
 
+def _get_home(config):
+    chome = config.brole_home_dict.copy()
+    if chome.get('text') is None:
+        chome['text'] = config.html_title
+    if not chome.get('url') is None:
+        return chome
+    if chome.get('docname') is None:
+        chome['docname'] = config.master_doc
+    return chome
+
+
 def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     """ Role for building and linking to notebook html pages
 
@@ -62,8 +73,10 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     env = doc.settings.env
     app = env.app
     j2_env = app.builder.templates.environment
-    text = utils.unescape(text)
+    # Get home data
+    home = _get_home(app.config)
     # Get title and link
+    text = utils.unescape(text)
     has_explicit, title, nb_fname = split_explicit_title(text)
     # Source notebook path
     nb_rel_path, nb_abs_path = env.relfn2path(nb_fname)
@@ -88,7 +101,6 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         # Evaluate and copy to output directory
         if not exists(nb_out_dir):
             os.makedirs(nb_out_dir)
-        print('nbfile', nb_abs_path, evaluate)
         if evaluate:
             nb = evaluate_nb_file(nb_abs_path)
         else:
@@ -105,17 +117,19 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         with open(py_fname, 'wt') as fobj:
             fobj.write(nb_to_py(nb)[0])
         # Make html
-        print(nb)
         html, resources = nb_to_html(nb)
         downloads = {'Notebook': _get_url(nb_out_path),
                      'Notebook (stripped)': _get_url(stripped_fname),
                      'Notebook as Python script': _get_url(py_fname)}
-        home = dict(icon = 'chevron-left',
-                    text = 'Back to docs',
-                    url = _rel_url(page_out_path, nb_out_dir))
+        # Set url to home doc
+        template_home = home.copy()
+        if template_home.get('url') is None:
+            home_docname = template_home['docname']
+            index_path = app.builder.get_outfilename(home_docname)
+            template_home['url'] = _rel_url(index_path, nb_out_dir)
         resources.update(nbhtml = html,
                          in_static = in_static,
-                         home = home,
+                         home = template_home,
                          date=datetime.utcnow().strftime(DATE_FMT),
                          downloads=downloads)
         template = j2_env.get_template('css_js_notebook.html')
@@ -123,7 +137,6 @@ def brole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         with open(html_fname, 'wt') as fobj:
             fobj.write(wrapped_html)
     # Return link node
-    # url = config.cheeseshop_url + '/' + nb_fname
     ref = nodes.reference(rawtext, title,
                           refuri=_rel_url(html_fname, page_out_dir))
     return [ref], []
@@ -141,5 +154,5 @@ def ebrole(typ, rawtext, text, lineno, inliner, options={}, content=[]):
 def setup(app):
     app.add_role('brole', brole)
     app.add_role('ebrole', ebrole)
-    app.add_config_value('cheeseshop_url',
-                         'http://pypi.python.org/pypi', 'html')
+    home = dict(icon = 'home', text = None, docname = None, url = None)
+    app.add_config_value('brole_home_dict', home, 'html')
